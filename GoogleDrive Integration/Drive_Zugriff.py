@@ -39,7 +39,7 @@ from datetime import datetime as DateTime
 ###     Es fehlt noch:
 ###     Falls Token nicht mehr aktuell/nicht erstellt ist läuft dies in einen Fehler
 ###         -> dies muss noch abgefangen werden!!!
-def DRIVE_create_authentication():
+def DRIVE_create_authentication(creds_notvalid):
         ###   Obtaining application credentials
         ###   in diesem Fall Zugriff auf die gesamte Drive-Struktur
         SCOPES = (
@@ -49,13 +49,15 @@ def DRIVE_create_authentication():
         ###     wenn bereits geschehen ist keine neue Authentifizierung nötig
         store = file.Storage('storage.json')           
         creds = store.get()
+ 
         if not creds or creds.invalid:
             flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
             creds = tools.run_flow(flow, store)
+            creds_notvalid = 1
         
         global DRIVE_Service
         DRIVE_Service = discovery.build('drive', 'v3', http=creds.authorize(Http()))
-        return DRIVE_Service
+        return creds_notvalid
 
 ###     Erstellt einen Ordner im abgefragten Ordner 
 ###     Parameter:
@@ -115,11 +117,9 @@ def DRIVE_print_list_of_files():
     
 ###     Event Definitionen -> Was passiert, wenn ein Event eintritt?
 def on_created(event):
-    print(f"hey, {event.src_path} has been created!")
+    print(f"hey, {event.src_path} wurde erstellt und nun hochgeladen..")
     
-    ### Name muss noch extrahier werden aus {event.src_path}
     file_location = str(event.src_path)
-    print('file_location: ', file_location)
     
     file_name = file_location.split("/")
     file_name = file_name[len(file_name)-1]
@@ -133,23 +133,20 @@ def on_created(event):
         mimetype = 'audio/wav'
     else:
         mimetype = 'application/octet-stream'
-    print('Mimetype: ', mimetype, 'file_name: ', file_name, 'file_location: ', file_location)
     
+    print('File Location: ', file_location, "File Name: ", file_name, "File Type: ", file_type, 'Mimetype: ', mimetype)
+    print('\n.. wird nun hochgeladen')
     DRIVE_create_upload(mimetype, file_name, file_location)
-    
+    print('\n.. ist hochgeladen')
     
 def on_deleted(event):
-    print(f"what the f**k! Someone deleted {event.src_path}!")
+    print(f"{event.src_path} wurde gelöscht")
     
 def on_modified(event):    
-    print(f"hey buddy, {event.src_path} has been modified")
+    print(f"{event.src_path} wurde angepasst")
     
 def on_moved(event):
-    print(f"ok ok ok, someone moved {event.src_path} to {event.dest_path}")  
-    
-    
-  
-######## main Funktionen ######################################################
+    print(f"{event.src_path} wurde nach {event.dest_path} verschoben")  
 
         ### WatchDog
 def start_WatchDog():
@@ -180,19 +177,23 @@ def start_WatchDog():
         my_observer.stop()
         my_observer.join()
         
+######## main Funktionen ##################################################
+        
 def main():
         ### 1. Drive Authentifizierung und erstellen von DRIVE_Service (global)
-        ### Überprüfung fehlt noch ;)
-    DRIVE_create_authentication()
-    print('Authentifizierung erfolgreich: \t')
-    print(DRIVE_Service)
-
-        ### 2. Neuen Ordner erstellen und erstellen von folder_id (global)
-        ### Integration der Zeitstamps etc 
+        ### Überprüfung mit Hilfe der creds_notvalid
+    creds_notvalid = 1    
+    while creds_notvalid == 1:
+        creds_notvalid = DRIVE_create_authentication(creds_notvalid)
+        if creds_notvalid == 1:
+                print("Die Authentifizierung im Webbrowser muss durchgeführt werden..")
+                input("Wenn sie durchgeführt ist mit Enter bestätigen..")
+    print('Authentifizierung erfolgreich! ', 'Authentifikationsschlüssel: \t', DRIVE_Service)
+      
+        ### 2. Neuen Ordner erstellen ("Record_%d-%m-%Y_%H-%M" und erstellen von folder_id (global)
     now = DateTime.now()    
     date_time = now.strftime("%d-%m-%Y_%H-%M")
     Ordnername = "Record_" + date_time
-    
     DRIVE_create_folder(Ordnername)
     print('Ordner: ', Ordnername, 'erstellt, mit der ID: ', folder_id)
     
@@ -200,5 +201,5 @@ def main():
     print('Ab hier läuft der Watchdog...')
     start_WatchDog()
 
-######## Funktionsaufruf ######################################################
+        ### main wird tatsächlich aufgerufen..
 main()
