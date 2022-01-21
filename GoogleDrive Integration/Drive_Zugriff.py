@@ -27,6 +27,10 @@ from watchdog.events import PatternMatchingEventHandler
     # Integration Datum/Uhrzeit
 from datetime import datetime as DateTime
 
+    # Zu Überwachender Ordner des WatchDogs
+global file_path 
+file_path = "./files/"
+
 ######## Google Drive Funktionen ##############################################
         
 ###     Erstellt Authentifizierung für die Google Drive API v3
@@ -39,7 +43,7 @@ from datetime import datetime as DateTime
 ###     Es fehlt noch:
 ###     Falls Token nicht mehr aktuell/nicht erstellt ist läuft dies in einen Fehler
 ###         -> dies muss noch abgefangen werden!!!
-def DRIVE_create_authentication(creds_notvalid):
+def DRIVE_create_authentication():
         ###   Obtaining application credentials
         ###   in diesem Fall Zugriff auf die gesamte Drive-Struktur
         SCOPES = (
@@ -53,11 +57,9 @@ def DRIVE_create_authentication(creds_notvalid):
         if not creds or creds.invalid:
             flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
             creds = tools.run_flow(flow, store)
-            creds_notvalid = 1
         
         global DRIVE_Service
         DRIVE_Service = discovery.build('drive', 'v3', http=creds.authorize(Http()))
-        return creds_notvalid
 
 ###     Erstellt einen Ordner im abgefragten Ordner 
 ###     Parameter:
@@ -117,7 +119,7 @@ def DRIVE_print_list_of_files():
     
 ###     Event Definitionen -> Was passiert, wenn ein Event eintritt?
 def on_created(event):
-    print(f"hey, {event.src_path} wurde erstellt und nun hochgeladen..")
+    print(f"{event.src_path} wurde erstellt und nun hochgeladen..")
     
     file_location = str(event.src_path)
     
@@ -134,7 +136,7 @@ def on_created(event):
     else:
         mimetype = 'application/octet-stream'
     
-    print('File Location: ', file_location, "File Name: ", file_name, "File Type: ", file_type, 'Mimetype: ', mimetype)
+    print('File Location: ', file_location, "\nFile Name: ", file_name, "\nFile Type: ", file_type, '\nMimetype: ', mimetype)
     print('\n.. wird nun hochgeladen')
     DRIVE_create_upload(mimetype, file_name, file_location)
     print('\n.. ist hochgeladen')
@@ -163,10 +165,9 @@ def start_WatchDog():
     my_event_handler.on_moved = on_moved
     
     ###     Observer
-    path = "./files/"
     go_recursively = True
     my_observer = Observer()
-    my_observer.schedule(my_event_handler, path, recursive=go_recursively)
+    my_observer.schedule(my_event_handler, file_path, recursive=go_recursively)
     
     ### Start Observer
     my_observer.start()
@@ -177,28 +178,23 @@ def start_WatchDog():
         my_observer.stop()
         my_observer.join()
         
-######## main Funktionen ##################################################
+######## Main Funktionen ##################################################
         
 def main():
         ### 1. Drive Authentifizierung und erstellen von DRIVE_Service (global)
-        ### Überprüfung mit Hilfe der creds_notvalid
-    creds_notvalid = 1    
-    while creds_notvalid == 1:
-        creds_notvalid = DRIVE_create_authentication(creds_notvalid)
-        if creds_notvalid == 1:
-                print("Die Authentifizierung im Webbrowser muss durchgeführt werden..")
-                input("Wenn sie durchgeführt ist mit Enter bestätigen..")
-    print('Authentifizierung erfolgreich! ', 'Authentifikationsschlüssel: \t', DRIVE_Service)
-      
+    print('Die Authentifizierung startet...')
+    DRIVE_create_authentication()
+    print('\n...Die Authentifizierung war erfolgreich!')
+    
         ### 2. Neuen Ordner erstellen ("Record_%d-%m-%Y_%H-%M" und erstellen von folder_id (global)
     now = DateTime.now()    
     date_time = now.strftime("%d-%m-%Y_%H-%M")
     Ordnername = "Record_" + date_time
     DRIVE_create_folder(Ordnername)
-    print('Ordner: ', Ordnername, 'erstellt, mit der ID: ', folder_id)
+    print('\nNeuer Ordner: ', Ordnername, 'mit der ID: ', folder_id, ' wurde erstellt.')
     
         ### 2. WatchDog starten
-    print('Ab hier läuft der Watchdog...')
+    print('\nEs kann losgehen! .. Ab hier läuft der Watchdog und überprüft den Ordner: ', file_path, '\n')
     start_WatchDog()
 
         ### main wird tatsächlich aufgerufen..
