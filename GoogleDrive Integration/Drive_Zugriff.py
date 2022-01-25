@@ -5,7 +5,7 @@ Created on Thu Nov 25 10:49:56 2021
 @author: Leon
 """
 
-    ### Python imports to bring in library functionality
+######## Python imports to bring in library functionality #####################
     # Google Drive Integration
 #pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 #pip install OAuth2Client
@@ -14,9 +14,6 @@ from googleapiclient import discovery
 from httplib2 import Http
 from oauth2client import file, client, tools
 from apiclient.http import MediaFileUpload
-
-global DRIVE_Service
-global folder_id
 
     # Watchdog Integration
 #pip install watchdog
@@ -27,6 +24,10 @@ from watchdog.events import PatternMatchingEventHandler
     # Integration Datum/Uhrzeit
 from datetime import datetime as DateTime
 
+######## Globale Variablen ####################################################
+global DRIVE_Service
+global folder_id
+folder_id = 'root'
     # Zu Überwachender Ordner des WatchDogs
 global file_path 
 file_path = "./files/"
@@ -80,11 +81,8 @@ def DRIVE_create_folder(Ordnername):
     
     ###     Für Testzwecke kann die Folder ID ausgegeben werden
     #print('Folder ID: %s' % file.get('id'))
-    
     ###     return der ID des neu erstellten Ordners
-    global folder_id
     folder_id = str(file.get('id'))
-    return folder_id
 
 ###     Lädt eine Datei in die Cloud hoch
 ###     Parameter:
@@ -115,7 +113,7 @@ def DRIVE_print_list_of_files():
         for f in files:
             print(f['name'], f['mimeType'], f['kind'])
 
-######## Watchdog Funktionen ##################################################
+######## WatchDog Funktionen ##################################################
     
 ###     Event Definitionen -> Was passiert, wenn ein Event eintritt?
 def on_created(event):
@@ -178,7 +176,7 @@ def start_WatchDog():
         my_observer.stop()
         my_observer.join()
         
-######## Main Funktionen ##################################################
+######## Main Funktion #######################################################
         
 def main():
         ### 1. Drive Authentifizierung und erstellen von DRIVE_Service (global)
