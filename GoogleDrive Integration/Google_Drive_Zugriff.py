@@ -82,6 +82,7 @@ def DRIVE_create_folder(Ordnername):
     ###     Für Testzwecke kann die Folder ID ausgegeben werden
     #print('Folder ID: %s' % file.get('id'))
     ###     return der ID des neu erstellten Ordners
+    global folder_id
     folder_id = str(file.get('id'))
 
 ###     Lädt eine Datei in die Cloud hoch
